@@ -10,6 +10,7 @@ CONFIGURACIÓN GENERAL Y VARIABLES
     --text-secondary: #AAAAAA;
     --border-color: #444444; 
     --header-height: 70px;
+    --hero-fallback-bg: #282828; /* Color de fondo para hero si la imagen falla */
 }
 
 * {
@@ -135,17 +136,39 @@ SECCIÓN HÉROE (CARRUSEL)
     position: absolute;
     top: 0;
     left: 0;
-    min-width: 100%;
+    width: 100%; /* Asegurar width y height */
     height: 100%;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat; /* Añadido por si acaso */
+    background-color: var(--hero-fallback-bg); /* Fallback si la imagen no carga o es transparente */
     display: flex;
     align-items: center;
     padding: 0 8%;
     opacity: 0;
     transition: opacity 1.2s ease-in-out;
     z-index: 1;
+    overflow: hidden; /* Para contener el mensaje de error si se añade */
 }
+
+/* Estilo para mensajes de error dentro del slide */
+.hero-slide .error-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    background-color: rgba(200, 0, 0, 0.85); /* Rojo más oscuro para mejor contraste */
+    padding: 20px 30px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 600;
+    z-index: 5; /* Asegurar que esté por encima del contenido normal del slide */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    max-width: 80%;
+}
+
 
 .hero-slide.active {
     opacity: 1;
@@ -156,6 +179,8 @@ SECCIÓN HÉROE (CARRUSEL)
     max-width: 550px;
     animation: fadeInContent 1s 0.8s forwards;
     opacity: 0;
+    position: relative; /* Para asegurar que el z-index del hero-content sea controlable si es necesario */
+    z-index: 3; /* Por encima del error-message si este no es position:absolute, o si queremos contenido encima del error. Ajustar según necesidad. */
 }
 
 .hero-slide:not(.active) .hero-content {
@@ -315,22 +340,11 @@ GUÍA DE PROGRAMACIÓN - Horizontal (Homepage)
     color: var(--text-light);
 }
 
-/* Estilos para el logo de texto inline original (comentados o eliminados) */
-/*
-.schedule-horizontal .logo-inline {
-    font-family: 'Poppins', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-.schedule-horizontal .logo-inline span { color: var(--primary-color); }
-*/
-
 /* Estilo para la imagen del logo inline en las secciones de programación */
 .logo-inline-image {
     height: 28px; /* --- AJUSTA ESTA ALTURA SEGÚN NECESITES --- */
     width: auto;
     vertical-align: middle; /* Ayuda a alinear mejor con el texto del H2 */
-    /* margin-left: 10px; No es necesario si el gap de .title-group ya da espacio */
 }
 
 
@@ -545,6 +559,7 @@ FICCIÓN DESTACADA (Nuevo)
     display: block;
     border-radius: 8px;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    background-color: var(--dark-bg-secondary); /* Fallback para imágenes en tarjetas */
 }
 .fiction-card:hover img {
     transform: scale(1.05);
