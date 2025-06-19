@@ -3,18 +3,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const appContainer = document.getElementById('app-container');
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('[data-page]');
-
     const heroSliderElement = document.querySelector('.hero-slider');
     const heroDotsContainer = document.querySelector('.hero .slider-dots');
     const liveNowTextElement = document.getElementById('live-now-text');
-
     const timelineWrapper = document.getElementById('timeline-wrapper');
     const timeMarkersHomeContainer = document.getElementById('time-markers-v2-home');
     const programBlocksHomeContainer = document.getElementById('program-blocks-v2-home');
     const timelineElementHome = document.getElementById('timeline-v2');
-
     const fictionGridContainer = document.getElementById('fiction-grid-container');
-
     const dayTabsFullContainer = document.getElementById('day-tabs-full');
     const scheduleListVerticalContainer = document.getElementById('schedule-list-v3');
 
@@ -24,24 +20,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- FUNCIÓN DE PARSEO DE CSV ---
     function parseCSV(csvText, delimiter = ';') {
-        if (!csvText || typeof csvText !== 'string') { // Comprobación adicional
-            console.warn("parseCSV recibió texto nulo o no es string:", csvText);
+        if (!csvText || typeof csvText !== 'string' || csvText.trim() === "") {
+            console.warn("parseCSV recibió texto vacío, nulo o no es string:", csvText);
             return [];
         }
-        // Eliminar BOM (Byte Order Mark) si está presente
-        // El BOM se manifiesta como el carácter U+FEFF.
         if (csvText.charCodeAt(0) === 0xFEFF) {
             csvText = csvText.substring(1);
         }
 
         const lines = csvText.trim().split('\n');
         if (lines.length === 0) return [];
-
-        // Asegurarse de que las cabeceras se parseen correctamente incluso si el CSV está vacío después de la cabecera
-        if (lines.length === 1 && lines[0].trim() === "") return []; // Archivo solo con BOM o vacío
-        if (lines[0].trim() === "") return []; // Primera línea (cabecera) vacía
-
-        const headers = lines[0].split(delimiter).map(header => header.trim().toLowerCase());
+        
+        const firstLineTrimmed = lines[0].trim();
+        if (firstLineTrimmed === "") {
+            console.warn("La línea de cabecera del CSV está vacía.");
+            return [];
+        }
+        const headers = firstLineTrimmed.split(delimiter).map(header => header.trim().toLowerCase());
         const data = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -49,16 +44,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (line === "") continue;
 
             const values = line.split(delimiter);
+            // Si una línea tiene menos valores que cabeceras, puede ser problemático.
+            // Por ahora, se asignará "" a las columnas faltantes.
             const entry = {};
-            
             headers.forEach((header, index) => {
                 let value = values[index] || ""; 
-
-                // Manejo de comillas: si el valor está entrecomillado, quitar comillas y escapar comillas dobles internas
                 if (value.startsWith('"') && value.endsWith('"')) {
                     value = value.substring(1, value.length - 1).replace(/""/g, '"');
                 }
-                entry[header] = value.trim(); // trim() de nuevo por si acaso
+                entry[header] = value.trim();
             });
             data.push(entry);
         }
@@ -66,10 +60,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function fetchCSV(filePath, delimiter = ';') {
+        // ... (sin cambios respecto a tu última versión con la advertencia de file:///)
         try {
             const response = await fetch(filePath);
             if (!response.ok) {
-                // Si estamos en file:// y hay un error de red (CORS), esto podría ser el caso
                 if (window.location.protocol === 'file:' && response.status === 0) {
                      throw new Error(`Error de red (probablemente CORS) al cargar ${filePath} en modo file://. Necesitas un servidor local.`);
                 }
@@ -79,54 +73,78 @@ document.addEventListener('DOMContentLoaded', function() {
             return parseCSV(csvText, delimiter);
         } catch (error) {
             console.error(`Fallo al obtener o parsear ${filePath}:`, error.message);
-            // Mostrar el error en la UI si estamos en file://
             if (window.location.protocol === 'file:' && appContainer) {
-                const errorMsg = document.createElement('p');
-                errorMsg.style.color = 'red';
-                errorMsg.style.textAlign = 'center';
-                errorMsg.style.padding = '20px';
-                errorMsg.innerHTML = `<strong>Error al cargar datos desde ${filePath}:</strong> ${error.message}<br>Por favor, usa un servidor local para ver la página correctamente.`;
-                
-                // Limpiar contenido anterior y añadir mensaje de error
-                if(document.getElementById('home').classList.contains('active')) { // Si estamos en home
-                    document.getElementById('home').innerHTML = ''; // Limpiar la página de inicio
-                    document.getElementById('home').appendChild(errorMsg);
-                } else if (appContainer.firstChild) {
-                    appContainer.insertBefore(errorMsg, appContainer.firstChild);
-                } else {
-                    appContainer.appendChild(errorMsg);
+                const errorMsgEl = appContainer.querySelector('.fetch-error-message[data-file="' + filePath + '"]');
+                if (!errorMsgEl) {
+                    const errorMsg = document.createElement('p');
+                    errorMsg.className = 'fetch-error-message';
+                    errorMsg.setAttribute('data-file', filePath);
+                    errorMsg.style.color = 'red';
+                    errorMsg.style.backgroundColor = 'rgba(255,230,230,0.9)';
+                    errorMsg.style.border = '1px solid red';
+                    errorMsg.style.padding = '10px';
+                    errorMsg.style.margin = '10px auto';
+                    errorMsg.style.textAlign = 'center';
+                    errorMsg.innerHTML = `<strong>Error al cargar datos desde ${filePath}:</strong> ${error.message}<br>Por favor, usa un servidor local para ver la página correctamente.`;
+                    
+                    const homePage = document.getElementById('home');
+                    if(homePage && homePage.classList.contains('active') && homePage.firstChild) {
+                        homePage.insertBefore(errorMsg, homePage.firstChild);
+                    } else if (appContainer.firstChild) {
+                        appContainer.insertBefore(errorMsg, appContainer.firstChild);
+                    } else {
+                        appContainer.appendChild(errorMsg);
+                    }
                 }
             }
             return []; 
         }
     }
 
-    // --- FUNCIONES DE TRANSFORMACIÓN DE DATOS CSV (sin cambios, verificar nombres de cabecera) ---
+    // --- FUNCIONES DE TRANSFORMACIÓN DE DATOS CSV ---
     function transformarDatosHero(csvData) {
-        return csvData.map(item => ({
-            id: item.id, // Asegúrate que 'id' es el nombre de cabecera en hero.csv (después de toLowerCase)
-            tag: item.tag,
-            title: item.title,
-            bio: item.bio,
-            type: item.type,
-            duration: item.duration,
-            genre: item.genre,
-            imdbLink: item.imbdlink, // Esta cabecera es 'imbdlink' en tu CSV
-            imageUrl: item.imageurl, // Esta cabecera es 'imageurl'
-            gradientColors: item.gradientcolors ? item.gradientcolors.split(';') : ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"], // 'gradientcolors'
-            ctaPage: item.ctapage // 'ctapage'
-        }));
+        console.log("Transformando datos Hero CSV:", csvData);
+        return csvData.map((item, index) => {
+            let parsedGradientColors = ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"]; // Default
+            if (item.gradientcolors) {
+                const splitColors = item.gradientcolors.split(';').map(s => s.trim()).filter(s => s !== "");
+                if (splitColors.length >= 2) {
+                    parsedGradientColors = splitColors;
+                } else {
+                    console.warn(`Item ${index} (${item.title || 'Hero'}): 'gradientcolors' no contiene al menos dos colores separados por ';'. Se usarán valores por defecto. Recibido: "${item.gradientcolors}"`);
+                }
+            } else {
+                 console.warn(`Item ${index} (${item.title || 'Hero'}): 'gradientcolors' no encontrado. Se usarán valores por defecto.`);
+            }
+
+            const transformed = {
+                id: item.id,
+                tag: item.tag,
+                title: item.title,
+                bio: item.bio,
+                type: item.type,
+                duration: item.duration,
+                genre: item.genre,
+                imdbLink: item.imbdlink,
+                imageUrl: item.imageurl,
+                gradientColors: parsedGradientColors,
+                ctaPage: item.ctapage
+            };
+            // console.log(`Hero item ${index} transformado:`, transformed);
+            return transformed;
+        });
     }
 
+    // ... (transformarDatosEstaNoche, transformarDatosParrilla, transformarDatosDestacados sin cambios funcionales, pero asegúrate de que los nombres de las claves (ej. item.imageurl) coincidan con las cabeceras minúsculas de tus CSV)
     function transformarDatosEstaNoche(csvData) {
         if (!csvData || csvData.length === 0) {
             return { prefijo: "Esta Noche", programas: [] };
         }
         return {
-            prefijo: csvData[0].prefijo, // 'prefijo'
+            prefijo: csvData[0].prefijo, 
             programas: csvData.map(item => ({
-                titulo: item.titulo, // 'titulo'
-                hora: item.hora     // 'hora'
+                titulo: item.titulo, 
+                hora: item.hora     
             }))
         };
     }
@@ -134,13 +152,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function transformarDatosParrilla(csvData) {
         const programacion = {};
         const diasSet = new Set();
-
         csvData.forEach(item => {
             if (!item.diakey || !item.start || !item.duration || !item.title) {
-                console.warn("Fila de parrilla incompleta, saltando:", item);
+                // console.warn("Fila de parrilla incompleta, saltando:", item); // Ya existe
                 return;
             }
-            const dia = item.diakey; // 'diakey'
+            const dia = item.diakey; 
             if (!programacion[dia]) {
                 programacion[dia] = [];
             }
@@ -154,7 +171,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 imdb: item.imdb
             });
         });
-        
         const ordenPreferido = ["Hoy", "Jue 19", "Vie 20", "Sáb 21", "Dom 22"];
         const diasDisponibles = Array.from(diasSet).sort((a, b) => {
             const indexA = ordenPreferido.indexOf(a);
@@ -164,39 +180,73 @@ document.addEventListener('DOMContentLoaded', function() {
             if (indexB !== -1) return 1;
             return a.localeCompare(b); 
         });
-
         return { diasDisponibles, programacion };
     }
 
     function transformarDatosDestacados(csvData) {
         return csvData.map(item => ({
-            imageUrl: item.imageurl, // 'imageurl'
+            imageUrl: item.imageurl, 
             title: item.title,
             bio: item.bio,
-            linkPage: item.linkpage // 'linkpage'
+            linkPage: item.linkpage 
         }));
     }
 
-    // --- FUNCIONES DE RENDERIZADO (sin cambios en su lógica interna) ---
-    // (renderizarHero, renderizarEstaNoche, etc. permanecen igual que en la respuesta anterior)
-    function renderizarHero(datosHero) { 
-        if (!heroSliderElement || !heroDotsContainer || !datosHero || !datosHero.length) {
-            if (heroSliderElement) heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
-            if (heroDotsContainer) heroDotsContainer.innerHTML = '';
+    // --- FUNCIONES DE RENDERIZADO ---
+    function renderizarHero(datosHero) {
+        console.log("RENDERIZAR HERO - Datos recibidos:", JSON.parse(JSON.stringify(datosHero)));
+        if (!heroSliderElement || !heroDotsContainer ) {
+            console.error("Elementos del DOM para Hero no encontrados.");
             return;
         }
+        if (!datosHero || datosHero.length === 0) {
+            console.warn("Hero slider: datos no encontrados o vacíos para renderizarHero.");
+            heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
+            heroDotsContainer.innerHTML = '';
+            return;
+        }
+
         heroSliderElement.innerHTML = '';
         heroDotsContainer.innerHTML = '';
 
         datosHero.forEach((pelicula, index) => {
+            console.log(`--- Procesando Slide Hero ${index} --- Título: ${pelicula.title}`);
             const slide = document.createElement('div');
             slide.classList.add('hero-slide');
-            const gradCol1 = pelicula.gradientColors && pelicula.gradientColors.length > 0 ? pelicula.gradientColors[0] : 'rgba(16, 16, 16, 0.9) 20%';
-            const gradCol2 = pelicula.gradientColors && pelicula.gradientColors.length > 1 ? pelicula.gradientColors[1] : 'rgba(16, 16, 16, 0.1) 70%';
-            const gradient = `linear-gradient(to right, ${gradCol1}, ${gradCol2})`;
-            slide.style.backgroundImage = `${gradient}, url('${pelicula.imageUrl}')`;
+            
+            let slideContentHTML = ''; // Para construir el contenido interno
+            let hasError = false;
 
-            slide.innerHTML = `
+            if (!pelicula.imageUrl || typeof pelicula.imageUrl !== 'string' || pelicula.imageUrl.trim() === "") {
+                console.error(`URL de imagen INVÁLIDA para película Hero "${pelicula.title || 'Desconocida'}". URL recibida:`, pelicula.imageUrl);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.innerHTML = `Error: Imagen no disponible para "${pelicula.title || 'Destacado'}".`;
+                slide.appendChild(errorDiv); // Añadir mensaje de error al slide
+                hasError = true;
+                // No se establece backgroundImage, se usará el color de fondo de fallback del CSS
+            } else {
+                console.log(`URL de imagen VÁLIDA para Hero: '${pelicula.imageUrl}'`);
+                let gradient = '';
+                // Asegurar que gradientColors es un array y tiene al menos 2 elementos.
+                if (pelicula.gradientColors && Array.isArray(pelicula.gradientColors) && pelicula.gradientColors.length >= 2) {
+                    const gradCol1 = pelicula.gradientColors[0];
+                    const gradCol2 = pelicula.gradientColors[1];
+                    gradient = `linear-gradient(to right, ${gradCol1}, ${gradCol2})`;
+                } else {
+                    // Si gradientColors es inválido, usar un gradiente por defecto o ninguno.
+                    // Aquí usamos un gradiente por defecto para no romper la estructura visual.
+                    console.warn(`gradientColors inválido o incompleto para "${pelicula.title}". Usando gradiente por defecto. Recibido:`, pelicula.gradientColors);
+                    const defaultGradCol1 = 'rgba(16, 16, 16, 0.9) 20%';
+                    const defaultGradCol2 = 'rgba(16, 16, 16, 0.1) 70%';
+                    gradient = `linear-gradient(to right, ${defaultGradCol1}, ${defaultGradCol2})`;
+                }
+                const finalBackgroundImage = `${gradient}, url('${pelicula.imageUrl}')`;
+                console.log("Aplicando background-image a Hero slide:", finalBackgroundImage);
+                slide.style.backgroundImage = finalBackgroundImage;
+            }
+
+            slideContentHTML = `
                 <div class="hero-content">
                     <span class="hero-tag">${pelicula.tag || ''}</span>
                     <h2>${pelicula.title || 'Título no disponible'}</h2>
@@ -212,6 +262,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
+            // Si hay un error de imagen, el mensaje de error ya está en el slide.
+            // Si no hay error, añadimos el contenido normal.
+            if (!hasError) {
+                slide.innerHTML = slideContentHTML;
+            } else {
+                 // Si hubo error, el contenido del slide (con el mensaje de error) ya está.
+                 // Podrías decidir añadir el hero-content igualmente pero sin la imagen.
+                 // O dejarlo como está (solo mensaje de error). Por ahora, el mensaje de error
+                 // es el contenido principal si la imagen falla.
+                 // Si quieres añadir el contenido de todas formas:
+                 // const contentDiv = document.createElement('div');
+                 // contentDiv.innerHTML = slideContentHTML;
+                 // Array.from(contentDiv.children).forEach(child => slide.appendChild(child));
+            }
+
             heroSliderElement.appendChild(slide);
 
             const dot = document.createElement('div');
@@ -219,12 +284,14 @@ document.addEventListener('DOMContentLoaded', function() {
             dot.addEventListener('click', () => { setHeroSlideManual(index); });
             heroDotsContainer.appendChild(dot);
         });
-        configurarHeroSlider(datosHero); 
+        configurarHeroSlider(datosHero);
     }
 
     function renderizarEstaNoche(datosEstaNoche) { 
-        if (!liveNowTextElement || !datosEstaNoche || !datosEstaNoche.programas || !datosEstaNoche.programas.length) {
-             if(liveNowTextElement) liveNowTextElement.textContent = "Información no disponible.";
+        // ... (sin cambios funcionales, asegurar que datosEstaNoche es válido)
+        if (!liveNowTextElement) return;
+        if (!datosEstaNoche || !datosEstaNoche.programas || !datosEstaNoche.programas.length) {
+             liveNowTextElement.textContent = "Información no disponible.";
             return;
         }
         const titulos = datosEstaNoche.programas.map(p => `${p.titulo} (${p.hora})`).join(', ');
@@ -232,20 +299,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderizarParrillaHorizontal(datosParrilla) { 
-        if (!programBlocksHomeContainer || !timeMarkersHomeContainer || !timelineElementHome || !datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion['Hoy']) {
+        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
+        if (!programBlocksHomeContainer || !timeMarkersHomeContainer || !timelineElementHome) return;
+        if (!datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion['Hoy']) {
              if (programBlocksHomeContainer) programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación para hoy.</p>';
             return;
         }
-    
         programBlocksHomeContainer.innerHTML = '';
         timeMarkersHomeContainer.innerHTML = '';
-    
         const PIXELS_PER_MINUTE_HORIZONTAL = 4;
         const TIMELINE_START_HOUR_HORIZONTAL = 7; 
         const TIMELINE_TOTAL_HOURS_HORIZONTAL = 22; 
-    
         timelineElementHome.style.width = `${TIMELINE_TOTAL_HOURS_HORIZONTAL * 60 * PIXELS_PER_MINUTE_HORIZONTAL}px`;
-    
         for (let i = 0; i <= TIMELINE_TOTAL_HOURS_HORIZONTAL * 2; i++) { 
             const offsetMinutes = i * 30;
             const markerHour = TIMELINE_START_HOUR_HORIZONTAL + Math.floor(offsetMinutes / 60);
@@ -256,56 +321,43 @@ document.addEventListener('DOMContentLoaded', function() {
             marker.textContent = `${String(markerHour % 24).padStart(2, '0')}:${String(markerMinute).padStart(2, '0')}`;
             timeMarkersHomeContainer.appendChild(marker);
         }
-    
         const programasHoy = datosParrilla.programacion['Hoy'];
         if (!programasHoy || programasHoy.length === 0) {
             programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación para hoy.</p>';
             return;
         }
-
         programasHoy.forEach(program => {
-            if (typeof program.duration !== 'number' || isNaN(program.duration)) {
-                return; 
-            }
-
+            if (typeof program.duration !== 'number' || isNaN(program.duration)) return; 
             let [hour, minute] = program.start.split(':').map(Number);
             let effectiveHour = hour;
-            if (hour < TIMELINE_START_HOUR_HORIZONTAL) {
-                 effectiveHour = hour + 24; 
-            }
-
+            if (hour < TIMELINE_START_HOUR_HORIZONTAL) effectiveHour = hour + 24; 
             const startMinutesFromTimelineStart = (effectiveHour - TIMELINE_START_HOUR_HORIZONTAL) * 60 + minute;
-    
             if (startMinutesFromTimelineStart < 0 || startMinutesFromTimelineStart >= TIMELINE_TOTAL_HOURS_HORIZONTAL * 60) return;
-    
             const block = document.createElement('div');
             block.classList.add('program-item-v2');
             block.style.left = `${startMinutesFromTimelineStart * PIXELS_PER_MINUTE_HORIZONTAL}px`;
             const itemWidth = Math.max(program.duration * PIXELS_PER_MINUTE_HORIZONTAL - 10, 60); 
             block.style.width = `${itemWidth}px`;
             block.innerHTML = `<h3>${program.title}</h3><p>${program.episode || ''}</p>`; 
-            
             const now = new Date();
             const currentDayDate = now.toDateString(); 
             const programDate = new Date(); 
             programDate.setHours(hour, minute, 0, 0);
-
             const programStartTotalMinutesToday = hour * 60 + minute;
             const programEndTotalMinutesToday = programStartTotalMinutesToday + program.duration;
             const nowTotalMinutesToday = now.getHours() * 60 + now.getMinutes();
-
-            if (currentDayDate === programDate.toDateString() &&
-                nowTotalMinutesToday >= programStartTotalMinutesToday && nowTotalMinutesToday < programEndTotalMinutesToday) {
+            if (currentDayDate === programDate.toDateString() && nowTotalMinutesToday >= programStartTotalMinutesToday && nowTotalMinutesToday < programEndTotalMinutesToday) {
                  block.classList.add('live');
             }
-    
             programBlocksHomeContainer.appendChild(block);
         });
     }
 
     function renderizarFiccionDestacada(datosDestacados) { 
-        if (!fictionGridContainer || !datosDestacados || !datosDestacados.length) {
-            if(fictionGridContainer) fictionGridContainer.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No hay ficción destacada.</p>';
+        // ... (sin cambios funcionales, asegurar que datosDestacados es válido)
+        if (!fictionGridContainer) return;
+        if (!datosDestacados || !datosDestacados.length) {
+            fictionGridContainer.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No hay ficción destacada.</p>';
             return;
         }
         fictionGridContainer.innerHTML = '';
@@ -313,9 +365,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.createElement('div');
             card.classList.add('fiction-card');
             if (item.linkPage) card.setAttribute('data-page', item.linkPage);
-
+            // Validar imageUrl para Destacados también
+            let imageUrl = item.imageUrl;
+            if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === "") {
+                console.warn(`URL de imagen inválida para Destacado "${item.title}". Usando placeholder.`);
+                imageUrl = 'https://placehold.co/600x350/ccc/fff?text=No+Image';
+            }
             card.innerHTML = `
-                <img src="${item.imageUrl || 'https://placehold.co/600x350/ccc/fff?text=No+Image'}" alt="${item.title || 'Destacado'}" onerror="this.onerror=null;this.src='https://placehold.co/600x350/000/fff?text=Error+Img';">
+                <img src="${imageUrl}" alt="${item.title || 'Destacado'}" onerror="this.onerror=null;this.src='https://placehold.co/600x350/000/fff?text=Error+Img';">
                 <div class="fiction-card-info">
                     <h3>${item.title || 'Título no disponible'}</h3>
                     <p>${item.bio || ''}</p>
@@ -332,20 +389,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderizarParrillaVertical(diaKey, datosParrilla) { 
-        if (!scheduleListVerticalContainer || !datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion[diaKey]) {
-            if(scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible para este día.</p>';
+        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
+        if (!scheduleListVerticalContainer) return;
+        if (!datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion[diaKey]) {
+            scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible para este día.</p>';
             return;
         }
         scheduleListVerticalContainer.innerHTML = '';
         const scheduleData = datosParrilla.programacion[diaKey];
         const now = new Date();
         const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
-        
         scheduleData.forEach(program => {
-            if (typeof program.duration !== 'number' || isNaN(program.duration)) {
-                return; 
-            }
-
+            if (typeof program.duration !== 'number' || isNaN(program.duration)) return; 
             const entry = document.createElement('div');
             entry.classList.add('program-entry');
             const [startHour, startMinute] = program.start.split(':').map(Number);
@@ -355,7 +410,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (esHoyReal && nowTotalMinutes >= programStartTotalMinutes && nowTotalMinutes < programEndTotalMinutes) {
                 entry.classList.add('is-live');
             }
-
             entry.innerHTML = `
                 <div class="time-col">
                     <div class="start-time">${program.start}</div>
@@ -372,8 +426,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function configurarTabsParrillaVertical(datosParrilla) { 
-        if (!dayTabsFullContainer || !datosParrilla || !datosParrilla.diasDisponibles || datosParrilla.diasDisponibles.length === 0) {
-            if(dayTabsFullContainer) dayTabsFullContainer.innerHTML = '';
+        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
+        if (!dayTabsFullContainer) return;
+        if (!datosParrilla || !datosParrilla.diasDisponibles || datosParrilla.diasDisponibles.length === 0) {
+            dayTabsFullContainer.innerHTML = '';
             if(scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible.</p>';
             return;
         }
@@ -395,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (sin cambios) ---
+    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (sin cambios funcionales) ---
     function navigateTo(pageId) {
         pages.forEach(page => page.classList.remove('active'));
         const nextPage = document.getElementById(pageId);
@@ -440,7 +496,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const slides = heroSliderElement.querySelectorAll('.hero-slide');
         const dots = heroDotsContainer.querySelectorAll('.dot');
-        if (slides.length === 0) return;
+        if (slides.length === 0) {
+            console.warn("ConfigurarHeroSlider: No se encontraron slides renderizados.");
+            return;
+        }
 
         function updateHeroSlideDisplay() {
             slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
@@ -465,29 +524,35 @@ document.addEventListener('DOMContentLoaded', function() {
             updateHeroSlideDisplay();
         }
         if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
-        heroAutoSlideInterval = setInterval(nextHeroSlide, 5600);
+        if (slides.length > 1) { // Solo iniciar intervalo si hay más de un slide
+            heroAutoSlideInterval = setInterval(nextHeroSlide, 5600);
+        }
         updateHeroSlideDisplay(); 
     }
     
     function setHeroSlideManual(index) {
         if (!heroSliderElement) return;
         const slides = heroSliderElement.querySelectorAll('.hero-slide');
-        if (index < 0 || index >= slides.length) return;
-        clearInterval(heroAutoSlideInterval);
+        if (slides.length === 0 || index < 0 || index >= slides.length) return;
+        
+        if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
         currentHeroSlide = index;
-        const dots = heroDotsContainer.querySelectorAll('.dot');
+        
         slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
+        const dots = heroDotsContainer.querySelectorAll('.dot');
         if (dots.length > 0) {
             dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
         }
-        if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
-        heroAutoSlideInterval = setInterval(() => {
-            currentHeroSlide = (currentHeroSlide + 1) % slides.length;
-            slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
-            if (dots.length > 0) {
-                 dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
-            }
-        }, 5600);
+
+        if (slides.length > 1) { // Reiniciar intervalo si hay más de un slide
+            heroAutoSlideInterval = setInterval(() => {
+                currentHeroSlide = (currentHeroSlide + 1) % slides.length;
+                slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
+                if (dots.length > 0) {
+                     dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
+                }
+            }, 5600);
+        }
     }
 
     function configurarTimelineHorizontalScroll() {
@@ -503,17 +568,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- INICIALIZACIÓN DE LA UI ---
     async function inicializarUI() {
-        // Advertencia si se ejecuta en modo file:///
         if (window.location.protocol === 'file:') {
             console.warn(
                 "ADVERTENCIA: La página se está ejecutando localmente (file:///).\n" +
                 "La carga de datos CSV mediante 'fetch' puede fallar debido a las políticas CORS del navegador.\n" +
-                "Para un funcionamiento correcto, por favor, sirva esta página a través de un servidor HTTP local (ej: Live Server en VSCode, 'npx serve', o 'python -m http.server')."
+                "Para un funcionamiento correcto, por favor, sirva esta página a través de un servidor HTTP local."
             );
             if (appContainer && !appContainer.querySelector('.file-protocol-warning')) {
                 const warningMsg = document.createElement('div');
                 warningMsg.className = 'file-protocol-warning';
-                warningMsg.style.backgroundColor = 'rgba(255, 200, 0, 0.8)'; // Amarillo advertencia
+                warningMsg.style.backgroundColor = 'rgba(255, 220, 100, 0.9)';
                 warningMsg.style.color = '#333';
                 warningMsg.style.padding = '15px';
                 warningMsg.style.margin = '20px auto';
@@ -521,27 +585,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 warningMsg.style.textAlign = 'center';
                 warningMsg.style.border = '1px solid #cc9900';
                 warningMsg.style.borderRadius = '5px';
+                warningMsg.style.position = 'fixed';
+                warningMsg.style.top = 'var(--header-height)';
+                warningMsg.style.left = '50%';
+                warningMsg.style.transform = 'translateX(-50%)';
+                warningMsg.style.zIndex = '2000';
                 warningMsg.innerHTML = `
-                    <strong>ADVERTENCIA:</strong> Estás viendo esta página localmente (sin un servidor).
-                    La carga de datos podría no funcionar. Para ver el contenido completo,
-                    <a href="https://developer.mozilla.org/es/docs/Learn/Common_questions/set_up_a_local_testing_server" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">
-                        configura un servidor de pruebas local
-                    </a>.
-                `;
-                // Intentar insertar el mensaje de advertencia de forma visible
-                const homePage = document.getElementById('home');
-                if (homePage && homePage.firstChild) {
-                    homePage.insertBefore(warningMsg, homePage.firstChild);
-                } else if (appContainer.firstChild) {
-                     appContainer.insertBefore(warningMsg, appContainer.firstChild);
-                } else {
-                    appContainer.appendChild(warningMsg);
-                }
+                    <strong>ADVERTENCIA:</strong> Estás viendo esta página sin un servidor local.
+                    La carga de datos podría fallar. Para una experiencia completa, usa un 
+                    <a href="https://developer.mozilla.org/es/docs/Learn/Common_questions/set_up_a_local_testing_server" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">
+                        servidor de pruebas local
+                    </a>.`;
+                appContainer.prepend(warningMsg); // Prepend para que esté arriba
             }
         }
 
         try {
-            // Cargar todos los datos CSV en paralelo
             const [
                 heroCsvData,
                 estaNocheCsvData,
@@ -554,35 +613,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchCSV('data/destacados.csv')
             ]);
 
-            // Transformar los datos CSV a la estructura JS esperada
             const datosHero = transformarDatosHero(heroCsvData);
             const datosEstaNoche = transformarDatosEstaNoche(estaNocheCsvData);
             const datosParrilla = transformarDatosParrilla(parrillaCsvData);
             const datosDestacados = transformarDatosDestacados(destacadosCsvData);
             
-            // Verificar si los datos se cargaron (algunos podrían estar vacíos si fetch falló en file://)
             let datosCargadosCorrectamente = 
                 (datosHero && datosHero.length > 0) ||
                 (datosEstaNoche && datosEstaNoche.programas && datosEstaNoche.programas.length > 0) ||
-                (datosParrilla && datosParrilla.programacion && Object.keys(datosParrilla.programacion).length > 0) ||
+                (datosParrilla && datosParrilla.diasDisponibles && datosParrilla.diasDisponibles.length > 0) || // Chequear diasDisponibles en vez de programacion para la parrilla
                 (datosDestacados && datosDestacados.length > 0);
 
             if (!datosCargadosCorrectamente && window.location.protocol === 'file:') {
-                 console.error("No se pudieron cargar los datos CSV en modo file://. Revisa la advertencia anterior.");
-                 // No continuar con el renderizado si no hay datos y estamos en file://
-                 return; 
+                 console.error("No se pudieron cargar los datos CSV en modo file://. La página puede no mostrarse correctamente. Revisa la advertencia anterior.");
+                 // Aún así intentar renderizar lo que se pueda o mostrar mensajes de error específicos
             }
 
-
-            // Renderizar componentes con los datos cargados
             renderizarHero(datosHero);
             renderizarEstaNoche(datosEstaNoche);
-            if (datosParrilla && datosParrilla.programacion) { // Comprobación adicional
+            if (datosParrilla && datosParrilla.diasDisponibles && datosParrilla.diasDisponibles.length > 0) {
                 renderizarParrillaHorizontal(datosParrilla);
                 configurarTabsParrillaVertical(datosParrilla);
             } else {
-                 console.warn("Datos de Parrilla no disponibles para renderizar.");
-                 // Mostrar placeholders si los contenedores existen
+                 console.warn("Datos de Parrilla no disponibles para renderizar (diasDisponibles está vacío o no existe).");
                 if (programBlocksHomeContainer) programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">Programación no disponible.</p>';
                 if (dayTabsFullContainer) dayTabsFullContainer.innerHTML = '';
                 if (scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">Programación no disponible.</p>';
@@ -591,15 +644,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             configurarNavegacion();
             configurarTimelineHorizontalScroll();
-
             navigateTo('home');
 
         } catch (error) {
-            console.error("Error general durante la inicialización de la UI:", error);
-            if(appContainer) appContainer.innerHTML = "<p style='text-align:center; padding: 50px; color: var(--text-secondary);'>Error al cargar los datos de la aplicación. Por favor, inténtelo más tarde.</p>";
+            console.error("Error FATAL durante la inicialización de la UI:", error);
+            if(appContainer) appContainer.innerHTML = "<p style='text-align:center; padding: 50px; color: var(--text-secondary); font-size:1.2em;'><strong>Error crítico al cargar la aplicación.</strong><br>Por favor, revise la consola para más detalles o inténtelo más tarde.</p>";
         }
     }
 
-    // Llamar a inicializarUI
     inicializarUI();
 });
