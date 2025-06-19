@@ -18,8 +18,66 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentHeroSlide = 0;
     let heroAutoSlideInterval;
 
-    // --- FUNCIÓN DE PARSEO DE CSV ---
+    // --- DATOS DEL HERO INCRUSTADOS DIRECTAMENTE ---
+    // Reemplaza esto con tus datos reales del hero.csv
+    const datosHeroIncrustados = [
+      {
+        "id": "vidas-criminales",
+        "tag": "Miércoles 18 - 22:30",
+        "title": "Vidas Criminales",
+        "bio": "Dos delincuentes comunes obtienen más de lo que esperaban después de secuestrar a la esposa de un desarrollador inmobiliario corrupto que no muestra interés en pagar el rescate de 1 millón de dólares por su regreso seguro.",
+        "type": "Cine",
+        "duration": "1h 38m",
+        "genre": "Comedia/Crimen",
+        "imdbLink": "https://www.imdb.com/es-es/title/tt1663207/",
+        "imageUrl": "https://i.ibb.co/C5t6pfb6/2.jpg", // URL de tu hero.csv
+        "gradientColors": ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"], // Asegúrate que esto sea un array
+        "ctaPage": "schedule"
+      },
+      {
+        "id": "pixie",
+        "tag": "Miércoles 18 - 20:30",
+        "title": "Pixie",
+        "bio": "Para vengar la muerte de su madre, Pixie planea un atraco, pero debe huir a través de Irlanda de los gánsteres, enfrentarse al patriarcado y elegir su propio destino.",
+        "type": "Cine",
+        "duration": "1h 33m",
+        "genre": "Comedia Negra",
+        "imdbLink": "https://www.imdb.com/es-es/title/tt10831086/",
+        "imageUrl": "https://i.ibb.co/h1JgQwF7/1.jpg", // URL de tu hero.csv
+        "gradientColors": ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"],
+        "ctaPage": "schedule"
+      },
+      {
+        "id": "crimenes-del-futuro",
+        "tag": "Domingo 22- 23:50",
+        "title": "Crímenes del futuro",
+        "bio": "La especie humana evoluciona y se adapta a un entorno sintético, el cuerpo es sometido a nuevas transformaciones y mutaciones. El artista Saul exhibe las metamorfósis de sus órganos en performances de vanguardia.",
+        "type": "Cine",
+        "duration": "1h 47m",
+        "genre": "Sci-Fi/Horror",
+        "imdbLink": "https://www.imdb.com/es-es/title/tt14549466/",
+        "imageUrl": "https://i.ibb.co/KpMXNkz3/3.jpg", // URL de tu hero.csv
+        "gradientColors": ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"],
+        "ctaPage": "schedule"
+      },
+      {
+        "id": "plan-a",
+        "tag": "Jueves 19 - 23:45",
+        "title": "Plan A",
+        "bio": "En 1945, un grupo de sobrevivientes judíos del Holocausto planeó envenenar el sistema de agua en Alemania. La película narra la peligrosa y atrevida operación encubierta que se llamó Plan A.",
+        "type": "Cine",
+        "duration": "1h 49m",
+        "genre": "Drama histórico",
+        "imdbLink": "https://www.imdb.com/es-es/title/tt5448338/",
+        "imageUrl": "https://i.ibb.co/tMVXFxJ2/4.jpg", // URL de tu hero.csv
+        "gradientColors": ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"],
+        "ctaPage": "schedule"
+      }
+    ];
+
+    // --- FUNCIÓN DE PARSEO DE CSV (la dejamos por si otros CSV siguen usándose) ---
     function parseCSV(csvText, delimiter = ';') {
+        // ... (código de parseCSV como estaba antes)
         if (!csvText || typeof csvText !== 'string' || csvText.trim() === "") {
             console.warn("parseCSV recibió texto vacío, nulo o no es string:", csvText);
             return [];
@@ -27,10 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (csvText.charCodeAt(0) === 0xFEFF) {
             csvText = csvText.substring(1);
         }
-
         const lines = csvText.trim().split('\n');
         if (lines.length === 0) return [];
-        
         const firstLineTrimmed = lines[0].trim();
         if (firstLineTrimmed === "") {
             console.warn("La línea de cabecera del CSV está vacía.");
@@ -38,14 +94,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const headers = firstLineTrimmed.split(delimiter).map(header => header.trim().toLowerCase());
         const data = [];
-
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line === "") continue;
-
             const values = line.split(delimiter);
-            // Si una línea tiene menos valores que cabeceras, puede ser problemático.
-            // Por ahora, se asignará "" a las columnas faltantes.
             const entry = {};
             headers.forEach((header, index) => {
                 let value = values[index] || ""; 
@@ -60,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function fetchCSV(filePath, delimiter = ';') {
-        // ... (sin cambios respecto a tu última versión con la advertencia de file:///)
+        // ... (código de fetchCSV como estaba antes)
         try {
             const response = await fetch(filePath);
             if (!response.ok) {
@@ -73,12 +125,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return parseCSV(csvText, delimiter);
         } catch (error) {
             console.error(`Fallo al obtener o parsear ${filePath}:`, error.message);
+            // ... (manejo de error en UI como estaba)
             if (window.location.protocol === 'file:' && appContainer) {
                 const errorMsgEl = appContainer.querySelector('.fetch-error-message[data-file="' + filePath + '"]');
                 if (!errorMsgEl) {
                     const errorMsg = document.createElement('p');
                     errorMsg.className = 'fetch-error-message';
                     errorMsg.setAttribute('data-file', filePath);
+                    // ... (estilos del mensaje de error)
                     errorMsg.style.color = 'red';
                     errorMsg.style.backgroundColor = 'rgba(255,230,230,0.9)';
                     errorMsg.style.border = '1px solid red';
@@ -102,41 +156,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- FUNCIONES DE TRANSFORMACIÓN DE DATOS CSV ---
-    function transformarDatosHero(csvData) {
-        console.log("Transformando datos Hero CSV:", csvData);
-        return csvData.map((item, index) => {
-            let parsedGradientColors = ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"]; // Default
-            if (item.gradientcolors) {
-                const splitColors = item.gradientcolors.split(';').map(s => s.trim()).filter(s => s !== "");
-                if (splitColors.length >= 2) {
-                    parsedGradientColors = splitColors;
-                } else {
-                    console.warn(`Item ${index} (${item.title || 'Hero'}): 'gradientcolors' no contiene al menos dos colores separados por ';'. Se usarán valores por defecto. Recibido: "${item.gradientcolors}"`);
-                }
-            } else {
-                 console.warn(`Item ${index} (${item.title || 'Hero'}): 'gradientcolors' no encontrado. Se usarán valores por defecto.`);
-            }
+    // Ya NO NECESITAMOS transformarDatosHero si los datos están incrustados en el formato correcto
+    // function transformarDatosHero(csvData) { ... } // Se puede eliminar o comentar
 
-            const transformed = {
-                id: item.id,
-                tag: item.tag,
-                title: item.title,
-                bio: item.bio,
-                type: item.type,
-                duration: item.duration,
-                genre: item.genre,
-                imdbLink: item.imbdlink,
-                imageUrl: item.imageurl,
-                gradientColors: parsedGradientColors,
-                ctaPage: item.ctapage
-            };
-            // console.log(`Hero item ${index} transformado:`, transformed);
-            return transformed;
-        });
-    }
-
-    // ... (transformarDatosEstaNoche, transformarDatosParrilla, transformarDatosDestacados sin cambios funcionales, pero asegúrate de que los nombres de las claves (ej. item.imageurl) coincidan con las cabeceras minúsculas de tus CSV)
     function transformarDatosEstaNoche(csvData) {
+        // ... (como estaba)
         if (!csvData || csvData.length === 0) {
             return { prefijo: "Esta Noche", programas: [] };
         }
@@ -150,11 +174,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function transformarDatosParrilla(csvData) {
+        // ... (como estaba)
         const programacion = {};
         const diasSet = new Set();
         csvData.forEach(item => {
             if (!item.diakey || !item.start || !item.duration || !item.title) {
-                // console.warn("Fila de parrilla incompleta, saltando:", item); // Ya existe
                 return;
             }
             const dia = item.diakey; 
@@ -184,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function transformarDatosDestacados(csvData) {
+        // ... (como estaba)
         return csvData.map(item => ({
             imageUrl: item.imageurl, 
             title: item.title,
@@ -192,16 +217,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
     }
 
+
     // --- FUNCIONES DE RENDERIZADO ---
-    function renderizarHero(datosHero) {
-        console.log("RENDERIZAR HERO - Datos recibidos:", JSON.parse(JSON.stringify(datosHero)));
+    // renderizarHero ahora usa directamente la variable global datosHeroIncrustados
+    // o el parámetro si se lo pasamos desde inicializarUI.
+    function renderizarHero(datosHero) { // Acepta datosHero como parámetro
+        console.log("RENDERIZAR HERO (con datos incrustados o pasados) - Datos recibidos:", JSON.parse(JSON.stringify(datosHero)));
         if (!heroSliderElement || !heroDotsContainer ) {
             console.error("Elementos del DOM para Hero no encontrados.");
             return;
         }
         if (!datosHero || datosHero.length === 0) {
             console.warn("Hero slider: datos no encontrados o vacíos para renderizarHero.");
-            heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
+            heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas.</p>';
             heroDotsContainer.innerHTML = '';
             return;
         }
@@ -210,73 +238,51 @@ document.addEventListener('DOMContentLoaded', function() {
         heroDotsContainer.innerHTML = '';
 
         datosHero.forEach((pelicula, index) => {
-            console.log(`--- Procesando Slide Hero ${index} --- Título: ${pelicula.title}`);
+            // console.log(`--- Procesando Slide Hero ${index} --- Título: ${pelicula.title}`); // Menos verboso ahora
             const slide = document.createElement('div');
             slide.classList.add('hero-slide');
             
-            let slideContentHTML = ''; // Para construir el contenido interno
-            let hasError = false;
-
+            let hasImageError = false;
             if (!pelicula.imageUrl || typeof pelicula.imageUrl !== 'string' || pelicula.imageUrl.trim() === "") {
                 console.error(`URL de imagen INVÁLIDA para película Hero "${pelicula.title || 'Desconocida'}". URL recibida:`, pelicula.imageUrl);
                 const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
+                errorDiv.className = 'error-message'; // Usar la clase CSS
                 errorDiv.innerHTML = `Error: Imagen no disponible para "${pelicula.title || 'Destacado'}".`;
-                slide.appendChild(errorDiv); // Añadir mensaje de error al slide
-                hasError = true;
-                // No se establece backgroundImage, se usará el color de fondo de fallback del CSS
+                slide.appendChild(errorDiv);
+                hasImageError = true;
             } else {
-                console.log(`URL de imagen VÁLIDA para Hero: '${pelicula.imageUrl}'`);
                 let gradient = '';
-                // Asegurar que gradientColors es un array y tiene al menos 2 elementos.
                 if (pelicula.gradientColors && Array.isArray(pelicula.gradientColors) && pelicula.gradientColors.length >= 2) {
                     const gradCol1 = pelicula.gradientColors[0];
                     const gradCol2 = pelicula.gradientColors[1];
                     gradient = `linear-gradient(to right, ${gradCol1}, ${gradCol2})`;
                 } else {
-                    // Si gradientColors es inválido, usar un gradiente por defecto o ninguno.
-                    // Aquí usamos un gradiente por defecto para no romper la estructura visual.
-                    console.warn(`gradientColors inválido o incompleto para "${pelicula.title}". Usando gradiente por defecto. Recibido:`, pelicula.gradientColors);
                     const defaultGradCol1 = 'rgba(16, 16, 16, 0.9) 20%';
                     const defaultGradCol2 = 'rgba(16, 16, 16, 0.1) 70%';
                     gradient = `linear-gradient(to right, ${defaultGradCol1}, ${defaultGradCol2})`;
                 }
-                const finalBackgroundImage = `${gradient}, url('${pelicula.imageUrl}')`;
-                console.log("Aplicando background-image a Hero slide:", finalBackgroundImage);
-                slide.style.backgroundImage = finalBackgroundImage;
+                slide.style.backgroundImage = `${gradient}, url('${pelicula.imageUrl}')`;
             }
 
-            slideContentHTML = `
-                <div class="hero-content">
-                    <span class="hero-tag">${pelicula.tag || ''}</span>
-                    <h2>${pelicula.title || 'Título no disponible'}</h2>
-                    <p class="description">${pelicula.bio || ''}</p>
-                    <div class="hero-meta">
-                        <span>${pelicula.type || ''}</span>
-                        <span>${pelicula.duration || ''}</span>
-                        <span>${pelicula.genre || ''}</span>
-                    </div>
-                    <div class="hero-buttons">
-                        <a class="cta-button" data-page="${pelicula.ctaPage || 'schedule'}">Programación</a>
-                        <a href="${pelicula.imdbLink || '#'}" target="_blank" rel="noopener noreferrer" class="cta-button cta-button-secondary">Saber más</a>
-                    </div>
+            // Siempre añadir el contenido, incluso si la imagen falló (el mensaje de error está posicionado encima)
+            const heroContentDiv = document.createElement('div');
+            heroContentDiv.classList.add('hero-content');
+            heroContentDiv.innerHTML = `
+                <span class="hero-tag">${pelicula.tag || ''}</span>
+                <h2>${pelicula.title || 'Título no disponible'}</h2>
+                <p class="description">${pelicula.bio || ''}</p>
+                <div class="hero-meta">
+                    <span>${pelicula.type || ''}</span>
+                    <span>${pelicula.duration || ''}</span>
+                    <span>${pelicula.genre || ''}</span>
+                </div>
+                <div class="hero-buttons">
+                    <a class="cta-button" data-page="${pelicula.ctaPage || 'schedule'}">Programación</a>
+                    <a href="${pelicula.imdbLink || '#'}" target="_blank" rel="noopener noreferrer" class="cta-button cta-button-secondary">Saber más</a>
                 </div>
             `;
-            // Si hay un error de imagen, el mensaje de error ya está en el slide.
-            // Si no hay error, añadimos el contenido normal.
-            if (!hasError) {
-                slide.innerHTML = slideContentHTML;
-            } else {
-                 // Si hubo error, el contenido del slide (con el mensaje de error) ya está.
-                 // Podrías decidir añadir el hero-content igualmente pero sin la imagen.
-                 // O dejarlo como está (solo mensaje de error). Por ahora, el mensaje de error
-                 // es el contenido principal si la imagen falla.
-                 // Si quieres añadir el contenido de todas formas:
-                 // const contentDiv = document.createElement('div');
-                 // contentDiv.innerHTML = slideContentHTML;
-                 // Array.from(contentDiv.children).forEach(child => slide.appendChild(child));
-            }
-
+            slide.appendChild(heroContentDiv);
+            
             heroSliderElement.appendChild(slide);
 
             const dot = document.createElement('div');
@@ -284,11 +290,11 @@ document.addEventListener('DOMContentLoaded', function() {
             dot.addEventListener('click', () => { setHeroSlideManual(index); });
             heroDotsContainer.appendChild(dot);
         });
-        configurarHeroSlider(datosHero);
+        configurarHeroSlider(datosHero); // Pasar datosHero
     }
 
-    function renderizarEstaNoche(datosEstaNoche) { 
-        // ... (sin cambios funcionales, asegurar que datosEstaNoche es válido)
+    // ... (renderizarEstaNoche, renderizarParrillaHorizontal, renderizarFiccionDestacada, renderizarParrillaVertical, configurarTabsParrillaVertical sin cambios funcionales)
+        function renderizarEstaNoche(datosEstaNoche) { 
         if (!liveNowTextElement) return;
         if (!datosEstaNoche || !datosEstaNoche.programas || !datosEstaNoche.programas.length) {
              liveNowTextElement.textContent = "Información no disponible.";
@@ -299,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderizarParrillaHorizontal(datosParrilla) { 
-        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
         if (!programBlocksHomeContainer || !timeMarkersHomeContainer || !timelineElementHome) return;
         if (!datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion['Hoy']) {
              if (programBlocksHomeContainer) programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación para hoy.</p>';
@@ -354,7 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderizarFiccionDestacada(datosDestacados) { 
-        // ... (sin cambios funcionales, asegurar que datosDestacados es válido)
         if (!fictionGridContainer) return;
         if (!datosDestacados || !datosDestacados.length) {
             fictionGridContainer.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No hay ficción destacada.</p>';
@@ -365,10 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.createElement('div');
             card.classList.add('fiction-card');
             if (item.linkPage) card.setAttribute('data-page', item.linkPage);
-            // Validar imageUrl para Destacados también
             let imageUrl = item.imageUrl;
             if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === "") {
-                console.warn(`URL de imagen inválida para Destacado "${item.title}". Usando placeholder.`);
                 imageUrl = 'https://placehold.co/600x350/ccc/fff?text=No+Image';
             }
             card.innerHTML = `
@@ -389,7 +391,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderizarParrillaVertical(diaKey, datosParrilla) { 
-        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
         if (!scheduleListVerticalContainer) return;
         if (!datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion[diaKey]) {
             scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible para este día.</p>';
@@ -426,7 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function configurarTabsParrillaVertical(datosParrilla) { 
-        // ... (sin cambios funcionales, asegurar que datosParrilla es válido)
         if (!dayTabsFullContainer) return;
         if (!datosParrilla || !datosParrilla.diasDisponibles || datosParrilla.diasDisponibles.length === 0) {
             dayTabsFullContainer.innerHTML = '';
@@ -451,7 +451,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (sin cambios funcionales) ---
+    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (sin cambios) ---
+    // (navigateTo, configurarNavegacion, configurarHeroSlider, setHeroSlideManual, configurarTimelineHorizontalScroll)
+    // ... Estas funciones permanecen como en la versión anterior ...
     function navigateTo(pageId) {
         pages.forEach(page => page.classList.remove('active'));
         const nextPage = document.getElementById(pageId);
@@ -490,16 +492,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function configurarHeroSlider(datosHero) { 
         if (!heroSliderElement || !datosHero || datosHero.length === 0) { 
-             if (heroSliderElement) heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
+             if (heroSliderElement) heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas.</p>';
             if(heroDotsContainer) heroDotsContainer.innerHTML = '';
             return;
         }
         const slides = heroSliderElement.querySelectorAll('.hero-slide');
         const dots = heroDotsContainer.querySelectorAll('.dot');
-        if (slides.length === 0) {
-            console.warn("ConfigurarHeroSlider: No se encontraron slides renderizados.");
-            return;
-        }
+        if (slides.length === 0) return;
 
         function updateHeroSlideDisplay() {
             slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
@@ -508,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const activeSlide = slides[currentHeroSlide];
             if(activeSlide) {
-                const ctaButton = activeSlide.querySelector('.cta-button[data-page]');
+                const ctaButton = activeSlide.querySelector('.hero-content .cta-button[data-page]'); // Más específico
                 if (ctaButton && !ctaButton.hasAttribute('data-listener-attached')) {
                     ctaButton.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -524,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateHeroSlideDisplay();
         }
         if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
-        if (slides.length > 1) { // Solo iniciar intervalo si hay más de un slide
+        if (slides.length > 1) { 
             heroAutoSlideInterval = setInterval(nextHeroSlide, 5600);
         }
         updateHeroSlideDisplay(); 
@@ -544,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
         }
 
-        if (slides.length > 1) { // Reiniciar intervalo si hay más de un slide
+        if (slides.length > 1) { 
             heroAutoSlideInterval = setInterval(() => {
                 currentHeroSlide = (currentHeroSlide + 1) % slides.length;
                 slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
@@ -566,9 +565,11 @@ document.addEventListener('DOMContentLoaded', function() {
         timelineWrapper.addEventListener('mousemove', (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - timelineWrapper.offsetLeft; const walk = (x - startX) * 2.5; timelineWrapper.scrollLeft = scrollLeft - walk; });
     }
 
+
     // --- INICIALIZACIÓN DE LA UI ---
     async function inicializarUI() {
         if (window.location.protocol === 'file:') {
+            // ... (advertencia de file:// como estaba)
             console.warn(
                 "ADVERTENCIA: La página se está ejecutando localmente (file:///).\n" +
                 "La carga de datos CSV mediante 'fetch' puede fallar debido a las políticas CORS del navegador.\n" +
@@ -577,18 +578,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (appContainer && !appContainer.querySelector('.file-protocol-warning')) {
                 const warningMsg = document.createElement('div');
                 warningMsg.className = 'file-protocol-warning';
+                // ... (estilos del mensaje de advertencia como estaban)
                 warningMsg.style.backgroundColor = 'rgba(255, 220, 100, 0.9)';
                 warningMsg.style.color = '#333';
                 warningMsg.style.padding = '15px';
-                warningMsg.style.margin = '20px auto';
-                warningMsg.style.maxWidth = '800px';
+                warningMsg.style.margin = '0'; // Sin margen para que quede pegado arriba
                 warningMsg.style.textAlign = 'center';
-                warningMsg.style.border = '1px solid #cc9900';
-                warningMsg.style.borderRadius = '5px';
+                warningMsg.style.borderBottom = '1px solid #cc9900'; // Solo borde inferior
                 warningMsg.style.position = 'fixed';
                 warningMsg.style.top = 'var(--header-height)';
-                warningMsg.style.left = '50%';
-                warningMsg.style.transform = 'translateX(-50%)';
+                warningMsg.style.left = '0';
+                warningMsg.style.right = '0';
                 warningMsg.style.zIndex = '2000';
                 warningMsg.innerHTML = `
                     <strong>ADVERTENCIA:</strong> Estás viendo esta página sin un servidor local.
@@ -596,40 +596,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     <a href="https://developer.mozilla.org/es/docs/Learn/Common_questions/set_up_a_local_testing_server" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">
                         servidor de pruebas local
                     </a>.`;
-                appContainer.prepend(warningMsg); // Prepend para que esté arriba
+                document.body.insertBefore(warningMsg, document.body.firstChild); // Insertar al inicio del body
+                // Ajustar padding-top del app-container si el mensaje está presente
+                appContainer.style.paddingTop = `calc(var(--header-height) + ${warningMsg.offsetHeight}px)`;
             }
         }
 
         try {
+            // Se usa datosHeroIncrustados directamente. No se hace fetch para hero.csv
             const [
-                heroCsvData,
+                // heroCsvData, // YA NO SE CARGA hero.csv
                 estaNocheCsvData,
                 parrillaCsvData,
                 destacadosCsvData
             ] = await Promise.all([
-                fetchCSV('data/hero.csv'),
+                // fetchCSV('data/hero.csv'), // YA NO SE CARGA hero.csv
                 fetchCSV('data/esta_noche.csv'),
                 fetchCSV('data/parrilla.csv'),
                 fetchCSV('data/destacados.csv')
             ]);
 
-            const datosHero = transformarDatosHero(heroCsvData);
+            // Usar los datos incrustados para Hero
+            const datosHero = datosHeroIncrustados; // <<<<<<<<<< CAMBIO AQUÍ
+
             const datosEstaNoche = transformarDatosEstaNoche(estaNocheCsvData);
             const datosParrilla = transformarDatosParrilla(parrillaCsvData);
             const datosDestacados = transformarDatosDestacados(destacadosCsvData);
             
-            let datosCargadosCorrectamente = 
-                (datosHero && datosHero.length > 0) ||
+            // ... (resto de la lógica de inicializarUI y renderizado como estaba)
+             let datosCargadosCorrectamente = 
+                (datosHero && datosHero.length > 0) || // Hero siempre debería estar cargado ahora
                 (datosEstaNoche && datosEstaNoche.programas && datosEstaNoche.programas.length > 0) ||
-                (datosParrilla && datosParrilla.diasDisponibles && datosParrilla.diasDisponibles.length > 0) || // Chequear diasDisponibles en vez de programacion para la parrilla
+                (datosParrilla && datosParrilla.diasDisponibles && datosParrilla.diasDisponibles.length > 0) ||
                 (datosDestacados && datosDestacados.length > 0);
 
             if (!datosCargadosCorrectamente && window.location.protocol === 'file:') {
-                 console.error("No se pudieron cargar los datos CSV en modo file://. La página puede no mostrarse correctamente. Revisa la advertencia anterior.");
-                 // Aún así intentar renderizar lo que se pueda o mostrar mensajes de error específicos
+                 console.error("Algunos datos CSV no se pudieron cargar en modo file://. La página puede no mostrarse correctamente. Revisa la advertencia anterior.");
             }
 
-            renderizarHero(datosHero);
+            renderizarHero(datosHero); // Pasar los datosHero (ahora incrustados)
             renderizarEstaNoche(datosEstaNoche);
             if (datosParrilla && datosParrilla.diasDisponibles && datosParrilla.diasDisponibles.length > 0) {
                 renderizarParrillaHorizontal(datosParrilla);
@@ -645,6 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
             configurarNavegacion();
             configurarTimelineHorizontalScroll();
             navigateTo('home');
+
 
         } catch (error) {
             console.error("Error FATAL durante la inicialización de la UI:", error);
