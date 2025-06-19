@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Selectores del DOM
+    // Selectores del DOM (sin cambios)
     const appContainer = document.getElementById('app-container');
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('[data-page]');
@@ -18,22 +18,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const dayTabsFullContainer = document.getElementById('day-tabs-full');
     const scheduleListVerticalContainer = document.getElementById('schedule-list-v3');
 
-    // --- DATOS JSON ELIMINADOS ---
-    // Ya no se usan las variables datosHero, datosEstaNoche, datosParrilla, datosDestacados aquí
-
-    // Variables de estado
+    // Variables de estado (sin cambios)
     let currentHeroSlide = 0;
     let heroAutoSlideInterval;
 
     // --- FUNCIÓN DE PARSEO DE CSV ---
     function parseCSV(csvText, delimiter = ';') {
+        if (!csvText || typeof csvText !== 'string') { // Comprobación adicional
+            console.warn("parseCSV recibió texto nulo o no es string:", csvText);
+            return [];
+        }
         // Eliminar BOM (Byte Order Mark) si está presente
+        // El BOM se manifiesta como el carácter U+FEFF.
         if (csvText.charCodeAt(0) === 0xFEFF) {
             csvText = csvText.substring(1);
         }
 
         const lines = csvText.trim().split('\n');
         if (lines.length === 0) return [];
+
+        // Asegurarse de que las cabeceras se parseen correctamente incluso si el CSV está vacío después de la cabecera
+        if (lines.length === 1 && lines[0].trim() === "") return []; // Archivo solo con BOM o vacío
+        if (lines[0].trim() === "") return []; // Primera línea (cabecera) vacía
 
         const headers = lines[0].split(delimiter).map(header => header.trim().toLowerCase());
         const data = [];
@@ -46,15 +52,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const entry = {};
             
             headers.forEach((header, index) => {
-                let value = values[index] || ""; // Asegurar que haya un valor, incluso si la línea es corta
+                let value = values[index] || ""; 
 
-                // Eliminar comillas dobles si rodean el valor
+                // Manejo de comillas: si el valor está entrecomillado, quitar comillas y escapar comillas dobles internas
                 if (value.startsWith('"') && value.endsWith('"')) {
-                    value = value.substring(1, value.length - 1);
+                    value = value.substring(1, value.length - 1).replace(/""/g, '"');
                 }
-                // Reemplazar comillas dobles escapadas ("") por una comilla doble (")
-                value = value.replace(/""/g, '"');
-                entry[header] = value.trim();
+                entry[header] = value.trim(); // trim() de nuevo por si acaso
             });
             data.push(entry);
         }
@@ -65,30 +69,52 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch(filePath);
             if (!response.ok) {
-                throw new Error(`Error al cargar ${filePath}: ${response.statusText}`);
+                // Si estamos en file:// y hay un error de red (CORS), esto podría ser el caso
+                if (window.location.protocol === 'file:' && response.status === 0) {
+                     throw new Error(`Error de red (probablemente CORS) al cargar ${filePath} en modo file://. Necesitas un servidor local.`);
+                }
+                throw new Error(`Error al cargar ${filePath}: ${response.status} ${response.statusText}`);
             }
             const csvText = await response.text();
             return parseCSV(csvText, delimiter);
         } catch (error) {
-            console.error(`Fallo al obtener o parsear ${filePath}:`, error);
-            return []; // Devolver array vacío en caso de error para no romper Promise.all
+            console.error(`Fallo al obtener o parsear ${filePath}:`, error.message);
+            // Mostrar el error en la UI si estamos en file://
+            if (window.location.protocol === 'file:' && appContainer) {
+                const errorMsg = document.createElement('p');
+                errorMsg.style.color = 'red';
+                errorMsg.style.textAlign = 'center';
+                errorMsg.style.padding = '20px';
+                errorMsg.innerHTML = `<strong>Error al cargar datos desde ${filePath}:</strong> ${error.message}<br>Por favor, usa un servidor local para ver la página correctamente.`;
+                
+                // Limpiar contenido anterior y añadir mensaje de error
+                if(document.getElementById('home').classList.contains('active')) { // Si estamos en home
+                    document.getElementById('home').innerHTML = ''; // Limpiar la página de inicio
+                    document.getElementById('home').appendChild(errorMsg);
+                } else if (appContainer.firstChild) {
+                    appContainer.insertBefore(errorMsg, appContainer.firstChild);
+                } else {
+                    appContainer.appendChild(errorMsg);
+                }
+            }
+            return []; 
         }
     }
 
-    // --- FUNCIONES DE TRANSFORMACIÓN DE DATOS CSV A ESTRUCTURA ORIGINAL ---
+    // --- FUNCIONES DE TRANSFORMACIÓN DE DATOS CSV (sin cambios, verificar nombres de cabecera) ---
     function transformarDatosHero(csvData) {
         return csvData.map(item => ({
-            id: item.id,
+            id: item.id, // Asegúrate que 'id' es el nombre de cabecera en hero.csv (después de toLowerCase)
             tag: item.tag,
             title: item.title,
             bio: item.bio,
             type: item.type,
             duration: item.duration,
             genre: item.genre,
-            imdbLink: item.imbdlink, // Nótese el cambio de 'imdbLink' a 'imbdlink' según CSV
-            imageUrl: item.imageurl,
-            gradientColors: item.gradientcolors ? item.gradientcolors.split(';') : ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"],
-            ctaPage: item.ctapage
+            imdbLink: item.imbdlink, // Esta cabecera es 'imbdlink' en tu CSV
+            imageUrl: item.imageurl, // Esta cabecera es 'imageurl'
+            gradientColors: item.gradientcolors ? item.gradientcolors.split(';') : ["rgba(16, 16, 16, 0.9) 20%", "rgba(16, 16, 16, 0.1) 70%"], // 'gradientcolors'
+            ctaPage: item.ctapage // 'ctapage'
         }));
     }
 
@@ -97,10 +123,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return { prefijo: "Esta Noche", programas: [] };
         }
         return {
-            prefijo: csvData[0].prefijo,
+            prefijo: csvData[0].prefijo, // 'prefijo'
             programas: csvData.map(item => ({
-                titulo: item.titulo,
-                hora: item.hora
+                titulo: item.titulo, // 'titulo'
+                hora: item.hora     // 'hora'
             }))
         };
     }
@@ -114,14 +140,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn("Fila de parrilla incompleta, saltando:", item);
                 return;
             }
-            const dia = item.diakey;
+            const dia = item.diakey; // 'diakey'
             if (!programacion[dia]) {
                 programacion[dia] = [];
             }
             diasSet.add(dia);
             programacion[dia].push({
                 start: item.start,
-                duration: parseInt(item.duration, 10), // Convertir a número
+                duration: parseInt(item.duration, 10), 
                 title: item.title,
                 episode: item.episode,
                 synopsis: item.synopsis,
@@ -129,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        // Ordenar los días como en el JSON original (Hoy primero, luego los demás)
         const ordenPreferido = ["Hoy", "Jue 19", "Vie 20", "Sáb 21", "Dom 22"];
         const diasDisponibles = Array.from(diasSet).sort((a, b) => {
             const indexA = ordenPreferido.indexOf(a);
@@ -137,28 +162,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
             if (indexA !== -1) return -1;
             if (indexB !== -1) return 1;
-            // Si no están en la lista de orden, se pueden ordenar alfabéticamente o por aparición
             return a.localeCompare(b); 
         });
-
 
         return { diasDisponibles, programacion };
     }
 
     function transformarDatosDestacados(csvData) {
         return csvData.map(item => ({
-            imageUrl: item.imageurl,
+            imageUrl: item.imageurl, // 'imageurl'
             title: item.title,
             bio: item.bio,
-            linkPage: item.linkpage
+            linkPage: item.linkpage // 'linkpage'
         }));
     }
 
-
-    // --- FUNCIONES DE RENDERIZADO (sin cambios en la lógica interna, solo cómo reciben los datos) ---
-    function renderizarHero(datosHero) { // Ahora recibe datosHero como argumento
+    // --- FUNCIONES DE RENDERIZADO (sin cambios en su lógica interna) ---
+    // (renderizarHero, renderizarEstaNoche, etc. permanecen igual que en la respuesta anterior)
+    function renderizarHero(datosHero) { 
         if (!heroSliderElement || !heroDotsContainer || !datosHero || !datosHero.length) {
-            console.warn("Hero slider o datos no encontrados/vacíos.");
             if (heroSliderElement) heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
             if (heroDotsContainer) heroDotsContainer.innerHTML = '';
             return;
@@ -197,10 +219,10 @@ document.addEventListener('DOMContentLoaded', function() {
             dot.addEventListener('click', () => { setHeroSlideManual(index); });
             heroDotsContainer.appendChild(dot);
         });
-        configurarHeroSlider(datosHero); // Pasar datosHero
+        configurarHeroSlider(datosHero); 
     }
 
-    function renderizarEstaNoche(datosEstaNoche) { // Ahora recibe datosEstaNoche
+    function renderizarEstaNoche(datosEstaNoche) { 
         if (!liveNowTextElement || !datosEstaNoche || !datosEstaNoche.programas || !datosEstaNoche.programas.length) {
              if(liveNowTextElement) liveNowTextElement.textContent = "Información no disponible.";
             return;
@@ -209,9 +231,8 @@ document.addEventListener('DOMContentLoaded', function() {
         liveNowTextElement.textContent = `${datosEstaNoche.prefijo || "Esta Noche"}: ${titulos}`;
     }
 
-    function renderizarParrillaHorizontal(datosParrilla) { // Ahora recibe datosParrilla
+    function renderizarParrillaHorizontal(datosParrilla) { 
         if (!programBlocksHomeContainer || !timeMarkersHomeContainer || !timelineElementHome || !datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion['Hoy']) {
-            console.warn("Parrilla Horizontal: Elementos DOM o datos de 'Hoy' no encontrados.");
              if (programBlocksHomeContainer) programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación para hoy.</p>';
             return;
         }
@@ -238,14 +259,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
         const programasHoy = datosParrilla.programacion['Hoy'];
         if (!programasHoy || programasHoy.length === 0) {
-            console.warn("Parrilla Horizontal: No hay programas para 'Hoy'.");
             programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación para hoy.</p>';
             return;
         }
 
         programasHoy.forEach(program => {
             if (typeof program.duration !== 'number' || isNaN(program.duration)) {
-                console.error(`Parrilla Horizontal: Duración inválida para "${program.title}":`, program.duration);
                 return; 
             }
 
@@ -284,9 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function renderizarFiccionDestacada(datosDestacados) { // Ahora recibe datosDestacados
+    function renderizarFiccionDestacada(datosDestacados) { 
         if (!fictionGridContainer || !datosDestacados || !datosDestacados.length) {
-            console.warn("Ficción Destacada: Contenedor o datos no encontrados/vacíos.");
             if(fictionGridContainer) fictionGridContainer.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No hay ficción destacada.</p>';
             return;
         }
@@ -313,10 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function renderizarParrillaVertical(diaKey, datosParrilla) { // Ahora recibe datosParrilla
+    function renderizarParrillaVertical(diaKey, datosParrilla) { 
         if (!scheduleListVerticalContainer || !datosParrilla || !datosParrilla.programacion || !datosParrilla.programacion[diaKey]) {
             if(scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible para este día.</p>';
-            console.warn(`Parrilla Vertical: No hay datos para el día "${diaKey}"`);
             return;
         }
         scheduleListVerticalContainer.innerHTML = '';
@@ -326,7 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         scheduleData.forEach(program => {
             if (typeof program.duration !== 'number' || isNaN(program.duration)) {
-                console.error(`Parrilla Vertical: Duración inválida para "${program.title}" en día "${diaKey}":`, program.duration);
                 return; 
             }
 
@@ -335,8 +351,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const [startHour, startMinute] = program.start.split(':').map(Number);
             const programStartTotalMinutes = startHour * 60 + startMinute;
             const programEndTotalMinutes = programStartTotalMinutes + program.duration;
-
-            // Para la lógica 'is-live', 'Hoy' en los datos debe referirse al día actual real.
             const esHoyReal = (diaKey === "Hoy" && (new Date().toDateString() === new Date().toDateString()));
             if (esHoyReal && nowTotalMinutes >= programStartTotalMinutes && nowTotalMinutes < programEndTotalMinutes) {
                 entry.classList.add('is-live');
@@ -357,9 +371,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function configurarTabsParrillaVertical(datosParrilla) { // Ahora recibe datosParrilla
+    function configurarTabsParrillaVertical(datosParrilla) { 
         if (!dayTabsFullContainer || !datosParrilla || !datosParrilla.diasDisponibles || datosParrilla.diasDisponibles.length === 0) {
-            console.warn("Tabs Parrilla Vertical: Contenedor o diasDisponibles no encontrados/vacíos.");
             if(dayTabsFullContainer) dayTabsFullContainer.innerHTML = '';
             if(scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No hay programación disponible.</p>';
             return;
@@ -382,19 +395,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (Mayormente sin cambios) ---
+    // --- LÓGICA DE COMPONENTES Y NAVEGACIÓN (sin cambios) ---
     function navigateTo(pageId) {
         pages.forEach(page => page.classList.remove('active'));
         const nextPage = document.getElementById(pageId);
         if (nextPage) {
             nextPage.classList.add('active');
             window.scrollTo(0, 0);
-
             navLinks.forEach(navLink => {
                 navLink.classList.toggle('active', navLink.getAttribute('data-page') === pageId);
             });
-        } else {
-            console.warn(`Página con ID '${pageId}' no encontrada.`);
         }
     }
 
@@ -406,15 +416,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (pageId) navigateTo(pageId);
             });
         });
-        
-        const logoElement = document.querySelector('.logo-link[data-page="home"]'); // Actualizado selector
+        const logoElement = document.querySelector('.logo-link[data-page="home"]'); 
         if(logoElement) {
             logoElement.addEventListener('click', (event) => {
                  event.preventDefault();
                  navigateTo('home');
             });
         }
-        
         const fullScheduleLinks = document.querySelectorAll('.full-schedule-link[data-page="schedule"]');
         fullScheduleLinks.forEach(link => {
              link.addEventListener('click', (e) => {
@@ -424,24 +432,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function configurarHeroSlider(datosHero) { // Ahora recibe datosHero
-        if (!heroSliderElement || !datosHero || datosHero.length === 0) { // Comprobar datosHero
+    function configurarHeroSlider(datosHero) { 
+        if (!heroSliderElement || !datosHero || datosHero.length === 0) { 
              if (heroSliderElement) heroSliderElement.innerHTML = '<p style="text-align:center; padding: 50px; color: var(--text-secondary);">No hay películas destacadas en este momento.</p>';
             if(heroDotsContainer) heroDotsContainer.innerHTML = '';
             return;
         }
         const slides = heroSliderElement.querySelectorAll('.hero-slide');
         const dots = heroDotsContainer.querySelectorAll('.dot');
-        
         if (slides.length === 0) return;
-
 
         function updateHeroSlideDisplay() {
             slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
             if (dots.length > 0) {
                 dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
             }
-            
             const activeSlide = slides[currentHeroSlide];
             if(activeSlide) {
                 const ctaButton = activeSlide.querySelector('.cta-button[data-page]');
@@ -455,15 +460,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
         function nextHeroSlide() {
             currentHeroSlide = (currentHeroSlide + 1) % slides.length;
             updateHeroSlideDisplay();
         }
-        
         if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
         heroAutoSlideInterval = setInterval(nextHeroSlide, 5600);
-        
         updateHeroSlideDisplay(); 
     }
     
@@ -471,21 +473,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!heroSliderElement) return;
         const slides = heroSliderElement.querySelectorAll('.hero-slide');
         if (index < 0 || index >= slides.length) return;
-
         clearInterval(heroAutoSlideInterval);
         currentHeroSlide = index;
-        
-        // Re-llamar a configurarHeroSlider no es necesario aquí si solo actualizamos
-        // el display. Si se quisiera reiniciar el intervalo con datos frescos (que no cambian aquí):
-        // configurarHeroSlider(aqui_necesitarias_pasar_datos_hero_globales_o_recargarlos);
-        // Por ahora, solo actualizamos el display y el intervalo se reiniciará en la próxima llamada natural.
-        // O mejor:
         const dots = heroDotsContainer.querySelectorAll('.dot');
         slides.forEach((s, i) => s.classList.toggle('active', i === currentHeroSlide));
         if (dots.length > 0) {
             dots.forEach((d, i) => d.classList.toggle('active', i === currentHeroSlide));
         }
-        // Reiniciar el intervalo
         if (heroAutoSlideInterval) clearInterval(heroAutoSlideInterval);
         heroAutoSlideInterval = setInterval(() => {
             currentHeroSlide = (currentHeroSlide + 1) % slides.length;
@@ -495,7 +489,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 5600);
     }
-
 
     function configurarTimelineHorizontalScroll() {
         if (!timelineWrapper) return;
@@ -510,6 +503,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- INICIALIZACIÓN DE LA UI ---
     async function inicializarUI() {
+        // Advertencia si se ejecuta en modo file:///
+        if (window.location.protocol === 'file:') {
+            console.warn(
+                "ADVERTENCIA: La página se está ejecutando localmente (file:///).\n" +
+                "La carga de datos CSV mediante 'fetch' puede fallar debido a las políticas CORS del navegador.\n" +
+                "Para un funcionamiento correcto, por favor, sirva esta página a través de un servidor HTTP local (ej: Live Server en VSCode, 'npx serve', o 'python -m http.server')."
+            );
+            if (appContainer && !appContainer.querySelector('.file-protocol-warning')) {
+                const warningMsg = document.createElement('div');
+                warningMsg.className = 'file-protocol-warning';
+                warningMsg.style.backgroundColor = 'rgba(255, 200, 0, 0.8)'; // Amarillo advertencia
+                warningMsg.style.color = '#333';
+                warningMsg.style.padding = '15px';
+                warningMsg.style.margin = '20px auto';
+                warningMsg.style.maxWidth = '800px';
+                warningMsg.style.textAlign = 'center';
+                warningMsg.style.border = '1px solid #cc9900';
+                warningMsg.style.borderRadius = '5px';
+                warningMsg.innerHTML = `
+                    <strong>ADVERTENCIA:</strong> Estás viendo esta página localmente (sin un servidor).
+                    La carga de datos podría no funcionar. Para ver el contenido completo,
+                    <a href="https://developer.mozilla.org/es/docs/Learn/Common_questions/set_up_a_local_testing_server" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">
+                        configura un servidor de pruebas local
+                    </a>.
+                `;
+                // Intentar insertar el mensaje de advertencia de forma visible
+                const homePage = document.getElementById('home');
+                if (homePage && homePage.firstChild) {
+                    homePage.insertBefore(warningMsg, homePage.firstChild);
+                } else if (appContainer.firstChild) {
+                     appContainer.insertBefore(warningMsg, appContainer.firstChild);
+                } else {
+                    appContainer.appendChild(warningMsg);
+                }
+            }
+        }
+
         try {
             // Cargar todos los datos CSV en paralelo
             const [
@@ -529,26 +559,35 @@ document.addEventListener('DOMContentLoaded', function() {
             const datosEstaNoche = transformarDatosEstaNoche(estaNocheCsvData);
             const datosParrilla = transformarDatosParrilla(parrillaCsvData);
             const datosDestacados = transformarDatosDestacados(destacadosCsvData);
+            
+            // Verificar si los datos se cargaron (algunos podrían estar vacíos si fetch falló en file://)
+            let datosCargadosCorrectamente = 
+                (datosHero && datosHero.length > 0) ||
+                (datosEstaNoche && datosEstaNoche.programas && datosEstaNoche.programas.length > 0) ||
+                (datosParrilla && datosParrilla.programacion && Object.keys(datosParrilla.programacion).length > 0) ||
+                (datosDestacados && datosDestacados.length > 0);
 
-            // Renderizar componentes con los datos cargados
-            if (datosHero && datosHero.length > 0) renderizarHero(datosHero);
-            else console.warn("Datos del Hero vacíos o no definidos después de cargar CSV.");
-
-            if (datosEstaNoche && datosEstaNoche.programas) renderizarEstaNoche(datosEstaNoche);
-            else console.warn("Datos de Esta Noche vacíos, no definidos o sin 'programas' después de cargar CSV.");
-
-            if (datosParrilla && datosParrilla.programacion && Object.keys(datosParrilla.programacion).length > 0) {
-                if (datosParrilla.programacion['Hoy']) renderizarParrillaHorizontal(datosParrilla);
-                else console.warn("Parrilla Horizontal: No hay datos para 'Hoy' después de cargar CSV.");
-                
-                if (datosParrilla.diasDisponibles) configurarTabsParrillaVertical(datosParrilla);
-                else console.warn("Parrilla Vertical: 'diasDisponibles' no encontrado después de cargar CSV.");
-            } else {
-                console.warn("Datos de Parrilla vacíos, no definidos o malformados después de cargar CSV.");
+            if (!datosCargadosCorrectamente && window.location.protocol === 'file:') {
+                 console.error("No se pudieron cargar los datos CSV en modo file://. Revisa la advertencia anterior.");
+                 // No continuar con el renderizado si no hay datos y estamos en file://
+                 return; 
             }
 
-            if (datosDestacados && datosDestacados.length > 0) renderizarFiccionDestacada(datosDestacados);
-            else console.warn("Datos Destacados vacíos o no definidos después de cargar CSV.");
+
+            // Renderizar componentes con los datos cargados
+            renderizarHero(datosHero);
+            renderizarEstaNoche(datosEstaNoche);
+            if (datosParrilla && datosParrilla.programacion) { // Comprobación adicional
+                renderizarParrillaHorizontal(datosParrilla);
+                configurarTabsParrillaVertical(datosParrilla);
+            } else {
+                 console.warn("Datos de Parrilla no disponibles para renderizar.");
+                 // Mostrar placeholders si los contenedores existen
+                if (programBlocksHomeContainer) programBlocksHomeContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">Programación no disponible.</p>';
+                if (dayTabsFullContainer) dayTabsFullContainer.innerHTML = '';
+                if (scheduleListVerticalContainer) scheduleListVerticalContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">Programación no disponible.</p>';
+            }
+            renderizarFiccionDestacada(datosDestacados);
             
             configurarNavegacion();
             configurarTimelineHorizontalScroll();
@@ -557,7 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error("Error general durante la inicialización de la UI:", error);
-            // Podrías mostrar un mensaje de error al usuario en la página aquí
             if(appContainer) appContainer.innerHTML = "<p style='text-align:center; padding: 50px; color: var(--text-secondary);'>Error al cargar los datos de la aplicación. Por favor, inténtelo más tarde.</p>";
         }
     }
