@@ -1,0 +1,691 @@
+/* ---------------------------------
+CONFIGURACIÓN GENERAL Y VARIABLES
+---------------------------------
+*/
+:root {
+    --primary-color: #084d6e;
+    --dark-bg: #212121; /* MODIFIED from #101010 (original) to be 7% lighter */
+    --dark-bg-secondary: #2a2a2a; /* MODIFIED from #1a1a1a (original) to be 7% lighter */
+    --text-light: #F5F5F5;
+    --text-secondary: #AAAAAA;
+    --border-color: #444444; 
+    --header-height: 70px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--dark-bg);
+    color: var(--text-light);
+    overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s ease;
+}
+
+ul {
+    list-style: none;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 0;
+}
+
+#app-container {
+    padding-top: var(--header-height); /* Asegura que el contenido no quede debajo del header fijo */
+}
+
+/* --------------------
+ENCABEZADO (HEADER)
+--------------------
+*/
+.main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--header-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 5%;
+    background-color: rgba(27, 27, 27, 0.8); /* MODIFIED from rgba(10,10,10,0.8) (original) to be 7% lighter */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos para el logo de imagen en el header */
+.logo-link {
+    display: inline-block; 
+    height: 100%; 
+    display: flex; 
+    align-items: center; 
+    text-decoration: none; 
+}
+
+.logo-image {
+    height: 45px; /* --- AJUSTA ESTA ALTURA SEGÚN EL TAMAÑO DESEADO PARA TU LOGO PRINCIPAL --- */
+    width: auto;  
+    display: block; 
+}
+
+
+.main-nav ul {
+    display: flex;
+    gap: 30px;
+}
+
+.main-nav a {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    padding-bottom: 5px;
+    cursor: pointer;
+}
+
+.main-nav a.active::after,
+.main-nav a:hover::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+/* --------------------
+SECCIÓN HÉROE (CARRUSEL)
+--------------------
+*/
+.hero {
+    height: calc(100vh - var(--header-height)); 
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-slider {
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.hero-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    padding: 0 8%;
+    opacity: 0;
+    transition: opacity 1.2s ease-in-out;
+    z-index: 1;
+}
+
+.hero-slide.active {
+    opacity: 1;
+    z-index: 2;
+}
+
+.hero-content {
+    max-width: 550px;
+    animation: fadeInContent 1s 0.8s forwards;
+    opacity: 0;
+}
+
+.hero-slide:not(.active) .hero-content {
+    opacity: 0;
+    animation: none;
+}
+
+@keyframes fadeInContent { to { opacity: 1; } }
+
+.hero-tag {
+    font-family: 'Montserrat', sans-serif;
+    display: inline-block;
+    background-color: var(--primary-color);
+    padding: 5px 15px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.hero-content h2 {
+    font-size: 3.7rem;
+    margin-bottom: 15px;
+    line-height: 1.1;
+    text-shadow: 0px 2px 10px rgba(0,0,0,0.5);
+}
+
+.hero-content p.description { 
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+.hero-meta {
+    font-family: 'Montserrat', sans-serif;
+    display: flex;
+    gap: 20px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 30px;
+}
+
+.hero-buttons {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.hero-content .cta-button {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border: 2px solid var(--primary-color);
+    padding: 15px 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.hero-content .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(8, 77, 110, 0.3);
+}
+
+.cta-button-secondary {
+    background-color: transparent;
+    border: 2px solid var(--text-light);
+    color: var(--text-light);
+}
+
+.cta-button-secondary:hover {
+    background-color: var(--text-light);
+    color: var(--dark-bg);
+    box-shadow: 0 10px 20px rgba(245, 245, 245, 0.2);
+}
+
+
+.slider-dots {
+    position: absolute;
+    bottom: 60px;
+    left: 8%;
+    display: flex;
+    gap: 15px;
+    z-index: 10;
+}
+
+.slider-dots .dot {
+    width: 12px;
+    height: 12px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.slider-dots .dot.active {
+    background-color: var(--text-light);
+    transform: scale(1.2);
+}
+
+
+/* --------------------
+BARRA "ESTA NOCHE"
+--------------------
+*/
+.live-now {
+    background-color: var(--primary-color);
+    text-align: center;
+    padding: 20px 0;
+    margin-top: -1px; 
+}
+
+.live-now h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* -----------------------------------
+ESTILOS DE PÁGINA Y NAVEGACIÓN
+-----------------------------------
+*/
+.page { display: none; }
+.page.active { display: block; }
+
+/* -----------------------------------
+GUÍA DE PROGRAMACIÓN - Horizontal (Homepage)
+-----------------------------------
+*/
+.schedule-horizontal .schedule-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.schedule-horizontal .title-group {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre el título "Programación TV" y el logo inline */
+}
+
+.schedule-horizontal h2 {
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--text-light);
+}
+
+/* Estilos para el logo de texto inline original (comentados o eliminados) */
+/*
+.schedule-horizontal .logo-inline {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.schedule-horizontal .logo-inline span { color: var(--primary-color); }
+*/
+
+/* Estilo para la imagen del logo inline en las secciones de programación */
+.logo-inline-image {
+    height: 28px; /* --- AJUSTA ESTA ALTURA SEGÚN NECESITES --- */
+    width: auto;
+    vertical-align: middle; /* Ayuda a alinear mejor con el texto del H2 */
+    /* margin-left: 10px; No es necesario si el gap de .title-group ya da espacio */
+}
+
+
+.full-schedule-link {
+    border: 1px solid var(--text-secondary);
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.full-schedule-link:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.timeline-v2-wrapper {
+    overflow-x: auto;
+    cursor: grab;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) #222;
+    height: 240px;
+    padding-top: 10px;
+}
+.timeline-v2-wrapper:active { cursor: grabbing; }
+.timeline-v2-wrapper::-webkit-scrollbar { height: 8px; }
+.timeline-v2-wrapper::-webkit-scrollbar-track { background: #222; border-radius: 4px; }
+.timeline-v2-wrapper::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 4px; }
+
+.timeline-v2 {
+    position: relative;
+    height: 100%;
+}
+
+.time-markers-v2 {
+    display: flex;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+    height: 40px;
+}
+
+.time-marker-v2 {
+    position: absolute;
+    top: 10px;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    transform: translateX(-50%);
+}
+
+.program-blocks-v2 {
+    position: relative;
+    height: 200px;
+}
+
+.program-item-v2 {
+    position: absolute;
+    top: 20px;
+    height: 150px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: var(--dark-bg-secondary);
+    border-left: 4px solid var(--primary-color);
+    overflow: hidden;
+    white-space: normal;
+    min-width: 150px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+}
+.program-item-v2:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(8, 77, 110, 0.4);
+    z-index: 5;
+}
+
+.program-item-v2.live {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border-left-color: var(--text-light); 
+}
+.program-item-v2 h3 {
+    font-size: 1.1rem;
+    color: var(--text-light); 
+    font-weight: 700;
+    margin: 0;
+    margin-bottom: 5px;
+}
+.program-item-v2 p { 
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.program-item-v2.live h3, .program-item-v2.live p {
+    color: var(--text-light);
+}
+
+
+/* -----------------------------------
+GUÍA DE PROGRAMACIÓN - Vertical (Schedule Page)
+-----------------------------------
+*/
+#schedule .schedule-content .schedule-header .title-group { /* Asegurar especificidad para esta sección también */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+#schedule .schedule-content h2 { color: var(--text-light); } 
+
+.day-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto; 
+    padding-bottom: 5px; 
+}
+.day-tabs::-webkit-scrollbar { height: 5px; }
+.day-tabs::-webkit-scrollbar-track { background: var(--dark-bg-secondary); border-radius: 2px;}
+.day-tabs::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 2px; }
+
+
+.day-tabs button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s ease;
+    white-space: nowrap; 
+}
+.day-tabs button:hover { color: var(--text-light); }
+.day-tabs button.active { color: var(--text-light); }
+.day-tabs button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; 
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+}
+
+.schedule-list-v3 { display: flex; flex-direction: column; }
+.program-entry {
+    display: flex;
+    gap: 20px;
+    padding: 25px 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.program-entry.is-live {
+    background-color: rgba(8, 77, 110, 0.2);
+    border-left: 4px solid var(--primary-color);
+    padding-left: 16px; 
+    margin-left: -10px; 
+    margin-right: -10px;
+}
+
+.program-entry .time-col { flex-basis: 90px; flex-shrink: 0; text-align: left; }
+.program-entry .time-col .start-time { font-size: 1.3rem; font-weight: 700; color: var(--text-light); }
+.program-entry .time-col .duration { font-size: 0.9rem; color: var(--text-secondary); }
+.program-entry .details-col { flex-grow: 1; }
+.program-entry .details-col h3 { font-size: 1.4rem; margin: 0 0 5px 0; color: var(--primary-color); }
+.program-entry .details-col .episode { font-size: 1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+.program-entry .details-col .synopsis { font-size: 1rem; line-height: 1.6; color: var(--text-light); }
+
+.imdb-link {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 5px 12px;
+    background-color: var(--dark-bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+
+.imdb-link:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-light);
+    text-decoration: none;
+}
+
+/* --------------------
+FICCIÓN DESTACADA (Nuevo)
+--------------------
+*/
+.featured-fiction { margin-top: 60px; }
+.featured-fiction h2 { font-size: 2.5rem; margin-bottom: 40px; text-align: left; color: var(--text-light);}
+.fiction-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+}
+.fiction-card {
+    background-color: transparent; 
+    cursor: pointer;
+}
+.fiction-card img {
+    width: 100%;
+    aspect-ratio: 16 / 9; 
+    object-fit: cover; 
+    display: block;
+    border-radius: 8px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.fiction-card:hover img {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+.fiction-card-info {
+    padding: 20px 0;
+}
+.fiction-card-info h3 {
+    font-size: 1.5rem;
+    color: var(--text-light);
+    margin-bottom: 5px;
+    transition: color 0.3s ease;
+}
+.fiction-card:hover .fiction-card-info h3 {
+    color: var(--primary-color);
+}
+.fiction-card-info p { 
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* --------------------
+PIE DE PÁGINA (FOOTER)
+--------------------
+*/
+.main-footer {
+    background-color: #121212; /* MODIFIED from #000 (original) to be 7% lighter */
+    padding: 60px 0 20px 0;
+    border-top: 4px solid var(--primary-color);
+}
+.footer-container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.footer-top-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+.footer-social h3 {
+    font-size: 1.8rem;
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 20px;
+}
+.social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+}
+.social-icons a {
+    color: var(--text-secondary);
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+.social-icons a:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+.social-icons svg {
+    width: 30px;
+    height: 30px;
+}
+.footer-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin-bottom: 50px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 40px;
+}
+.footer-column h4 {
+    font-size: 1.1rem;
+    color: var(--text-light);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.footer-column ul li {
+    margin-bottom: 10px;
+}
+.footer-column ul a {
+    color: var(--text-secondary);
+}
+.footer-column ul a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+.copyright {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* --------------------
+DISEÑO RESPONSIVE
+--------------------
+*/
+@media (max-width: 768px) {
+    :root { --header-height: 60px; }
+    .main-nav { display: none; } 
+    .hero-content h2 { font-size: 2.8rem; }
+    .hero-content p.description { display: none; }
+    .hero-meta { justify-content: center; font-size: 0.9rem; }
+    .hero-buttons { flex-direction: column; align-items: flex-start; gap: 10px;}
+    .hero-content .cta-button { padding: 12px 25px; font-size: 0.9rem; width: 100%; text-align: center;}
+
+    .slider-dots { bottom: 20px; left: 50%; transform: translateX(-50%); }
+    .live-now h2 { font-size: 1.1rem; padding: 0 15px; line-height: 1.4; }
+    
+    .schedule-horizontal .schedule-header,
+    #schedule .schedule-content .schedule-header { 
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .full-schedule-link { align-self: flex-start; }
+    .program-entry { flex-direction: column; gap: 10px; }
+    .program-entry.is-live {
+        padding-left: 10px; 
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .fiction-grid { grid-template-columns: 1fr; }
+    .footer-links-grid { grid-template-columns: repeat(2, 1fr); }
+    .footer-column { text-align: center; }
+}
+
+ @media (max-width: 480px) {
+    .logo-image { /* Logo principal en el header */
+        height: 35px; 
+    }
+    .logo-inline-image { /* Logo inline en programación */
+        height: 24px; 
+    }
+    .hero-content h2 { font-size: 2.2rem; }
+    .live-now h2 { font-size: 1rem; }
+    .schedule-horizontal h2, #schedule .schedule-content h2 { font-size: 2rem; }
+    .fiction-grid { gap: 20px; }
+    .footer-links-grid { grid-template-columns: 1fr; }
+ }
